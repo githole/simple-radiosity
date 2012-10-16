@@ -180,13 +180,13 @@ void calc_form_factor(const int a_div_num, const int b_div_num, const int mc_sam
 								// モンテカルロ積分
 								// 等間隔にサンプリング
 								double F = 0;
-								const int Ni = mc_sample-1, Nj = mc_sample-1;
-								for (int ias = 0; ias <= Ni; ias ++) {
-									for (int ibs = 0; ibs <= Ni; ibs ++) {
-										for (int jas = 0; jas <= Nj; jas ++) {
-											for (int jbs = 0; jbs <= Nj; jbs ++) {
-												const double u0 = (double)ias / Ni, u1 = (double)ibs / Ni;
-												const double u2 = (double)jas / Nj, u3 = (double)jbs / Nj;
+								const int Ni = mc_sample, Nj = mc_sample;
+								for (int ias = 0; ias < Ni; ias ++) {
+									for (int ibs = 0; ibs < Ni; ibs ++) {
+										for (int jas = 0; jas < Nj; jas ++) {
+											for (int jbs = 0; jbs < Nj; jbs ++) {
+												const double u0 = (double)(ias + 0.5) / Ni, u1 = (double)(ibs + 0.5) / Ni;
+												const double u2 = (double)(jas + 0.5) / Nj, u3 = (double)(jbs + 0.5) / Nj;
 												const Vec xi = recs[i].p0 + recs[i].a * ((double)(ia + u0) / recs[i].a_num) + recs[i].b * ((double)(ib + u1) / recs[i].b_num);
 												const Vec xj = recs[j].p0 + recs[j].a * ((double)(ja + u2) / recs[j].a_num) + recs[j].b * ((double)(jb + u3) / recs[j].b_num);
 
