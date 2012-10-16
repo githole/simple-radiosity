@@ -153,7 +153,7 @@ void calc_form_factor(const int a_div_num, const int b_div_num, const int mc_sam
 	form_factor = new double[patch_num * patch_num];
 	memset(form_factor, 0.0, sizeof(double) * patch_num * patch_num);
 	
-//#pragma omp parallel for schedule(dynamic, 1) num_threads(10)
+//#pragma omp parallel for schedule(dynamic, 1) num_threads(3)
 	for (int i = 0; i < int(n); i ++) {
 		srand(i * i * i + i);
 		int patch_i = 0;
@@ -178,33 +178,41 @@ void calc_form_factor(const int a_div_num, const int b_div_num, const int mc_sam
 							if (i != j) {
 								// フォームファクター計算
 								// モンテカルロ積分
+								// 等間隔にサンプリング
 								double F = 0;
-								const int N = mc_sample;
-								for (int sample = 0; sample < N; sample ++) {
-									const double u0 = rand01(), u1 = rand01();
-									const double u2 = rand01(), u3 = rand01();
-									const Vec xi = recs[i].p0 + recs[i].a * ((double)(ia + u0) / recs[i].a_num) + recs[i].b * ((double)(ib + u1) / recs[i].b_num);
-									const Vec xj = recs[j].p0 + recs[j].a * ((double)(ja + u2) / recs[j].a_num) + recs[j].b * ((double)(jb + u3) / recs[j].b_num);
-									
-									// V(x, y)
-									const Vec ij = Normalize(xj - xi);
-									double t; // レイからシーンの交差位置までの距離
-									int id;   // 交差したシーン内オブジェクトのID
-									Vec normal; // 交差位置の法線
-									if (intersect_scene(Ray(xi, ij), &t, &id, &normal) && id != j) {
-										continue;
-									}
+								const int Ni = mc_sample-1, Nj = mc_sample-1;
+								for (int ias = 0; ias <= Ni; ias ++) {
+									for (int ibs = 0; ibs <= Ni; ibs ++) {
+										for (int jas = 0; jas <= Nj; jas ++) {
+											for (int jbs = 0; jbs <= Nj; jbs ++) {
+												const double u0 = (double)ias / Ni, u1 = (double)ibs / Ni;
+												const double u2 = (double)jas / Nj, u3 = (double)jbs / Nj;
+												const Vec xi = recs[i].p0 + recs[i].a * ((double)(ia + u0) / recs[i].a_num) + recs[i].b * ((double)(ib + u1) / recs[i].b_num);
+												const Vec xj = recs[j].p0 + recs[j].a * ((double)(ja + u2) / recs[j].a_num) + recs[j].b * ((double)(jb + u3) / recs[j].b_num);
 
-									const double d0 = Dot(normal_i, ij);
-									const double d1 = Dot(normal_j, -1.0 * ij);
-									
-									if (d0 > 0.0 && d1 > 0.0) {
-										const double K = d0 * d1 / (PI * (xj - xi).LengthSquared());
-										const double pdf = (1.0 / Ai) * (1.0 / Aj);
-										F += K / pdf;
+												// V(x, y)
+												const Vec ij = Normalize(xj - xi);
+												double t; // レイからシーンの交差位置までの距離
+												int id;   // 交差したシーン内オブジェクトのID
+												Vec normal; // 交差位置の法線
+												if (intersect_scene(Ray(xi, ij), &t, &id, &normal) && id != j) {
+													continue;
+												}
+
+												const double d0 = Dot(normal_i, ij);
+												const double d1 = Dot(normal_j, -1.0 * ij);
+
+												if (d0 > 0.0 && d1 > 0.0) {
+													const double K = d0 * d1 / (PI * (xj - xi).LengthSquared());
+													const double pdf = (1.0 / Ai) * (1.0 / Aj);
+													F += K / pdf;
+												}
+
+											}
+										}
 									}
-								}
-								F /= N * Ai;
+								} 
+								F /= (Ni + 1) * (Ni + 1) * (Nj + 1) * (Nj + 1) * Ai;
 								if (F > 1.0)
 									F = 1.0;
 								form_factor[patch_i * patch_num + patch_j] = F;
@@ -236,7 +244,7 @@ void calc_radiosity(const int iteration) {
 						for (int jb = 0; jb < recs[j].b_num; jb ++) {
 							const double Fij = form_factor[patch_i * patch_num + patch_j];
 							if (Fij > 0.0)
-								B = B + Fij * recs[j].patch[ja * recs[j].b_num + ib];
+								B = B + Fij * recs[j].patch[ja * recs[j].b_num + jb];
 							patch_j ++;
 						}
 					}
@@ -395,8 +403,8 @@ int main(int argc, char **argv) {
 	Color *image_interpolated = new Color[width * height];
 
 	// フォームファクター計算
-	// 16x16に分割、フォームファクターの計算に256サンプル使ってモンテカルロ積分する
-	calc_form_factor(16, 16, 256);
+	// 16x16に分割、フォームファクターの計算に(3x3)^2サンプル使ってモンテカルロ積分する
+	calc_form_factor(16, 16, 3);
 
 	// ガウス=ザイデル法でラジオシティ方程式解く
 	// 32反復
@@ -405,7 +413,7 @@ int main(int argc, char **argv) {
 		calc_radiosity(i);
 	}
 
-//	#pragma omp parallel for schedule(dynamic, 1) num_threads(10)
+//#pragma omp parallel for schedule(dynamic, 1) num_threads(3)
 	for (int y = 0; y < height; y ++) {
 		std::cerr << "Rendering (" << samples * 4 << " spp) " << (100.0 * y / (height - 1)) << "%" << std::endl;
 		srand(y * y * y);
