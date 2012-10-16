@@ -61,7 +61,7 @@ struct Rectangle {
 		if (ia < 0) ia = 0;
 		if (ia >= a_num) ia = a_num - 1;
 		if (ib < 0) ib = 0;
-		if (ib >= b_num) ib = a_num - 1;
+		if (ib >= b_num) ib = b_num - 1;
 		return patch[ia * b_num + ib];
 	}
 
