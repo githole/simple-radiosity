@@ -313,6 +313,10 @@ Color radiance(const Ray &ray, const int depth, bool interpolation = true) {
 			int ib0 = int(db - 0.5); 
 			double dx = da - ia0 - 0.5;
 			double dy = db - ib0 - 0.5;
+			if (dx < 0.0)  dx = 0.0;
+			if (dx >= 1.0) dx = 1.0;
+			if (dy < 0.0)  dy = 0.0;
+			if (dy >= 1.0) dy = 1.0;
 			return PI * bicubicInterpolate(c, dx, dy);
 		}
 		// 完全拡散面なのでPI倍
