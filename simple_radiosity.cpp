@@ -212,7 +212,7 @@ void calc_form_factor(const int a_div_num, const int b_div_num, const int mc_sam
 										}
 									}
 								} 
-								F /= (Ni + 1) * (Ni + 1) * (Nj + 1) * (Nj + 1) * Ai;
+								F /= (Ni) * (Ni) * (Nj) * (Nj) * Ai;
 								if (F > 1.0)
 									F = 1.0;
 								form_factor[patch_i * patch_num + patch_j] = F;
